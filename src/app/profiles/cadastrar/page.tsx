@@ -1,11 +1,10 @@
 "use client";
 
 import { firestore } from "../../lib/firebaseconfig";
-import { useState, useEffect, FormEvent, ChangeEvent } from "react";
-import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc } from "firebase/firestore";
+import { useState, FormEvent, ChangeEvent } from "react";
+import { collection, addDoc } from "firebase/firestore";
 
 interface Aluno {
-    id: string;
     nome: string;
     sobrenome: string;
     datanascimento: string;
@@ -14,28 +13,11 @@ interface Aluno {
 
 const Cadastro = () => {
     const [formData, setFormData] = useState<Aluno>({
-        id: '',
         nome: '',
         sobrenome: '',
         datanascimento: '',
         sexo: '',
     });
-
-    const [alunos, setAlunos] = useState<Aluno[]>([]);
-    const [mensagem, setMensagem] = useState("");
-
-    useEffect(() => {
-        const fetchAlunos = async () => {
-            const alunosCollection = collection(firestore, 'alunos');
-            const alunosDocs = await getDocs(alunosCollection);
-            const alunosData: Aluno[] = alunosDocs.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as Aluno[];
-            setAlunos(alunosData);
-        };
-        fetchAlunos();
-    }, []);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -46,74 +28,29 @@ const Cadastro = () => {
     };
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault(); // Prevent default form submission
+        e.preventDefault();
         try {
-            if (formData.id) {
-                const alunoDoc = doc(firestore, 'alunos', formData.id);
-                await updateDoc(alunoDoc, { ...formData });
-                alert('Dados atualizados com sucesso');
-            } else {
-                await addDoc(collection(firestore, 'alunos'), formData);
-                alert('Dados cadastrados com sucesso');
-            }
-            setFormData({
-                id: '',
-                nome: '',
-                sobrenome: '',
-                datanascimento: '',
-                sexo: ''
-            });
-            loadAlunos();
+            await addDoc(collection(firestore, 'alunos'), formData); // O Firestore gera um ID automaticamente
+            alert('Dados cadastrados com sucesso');
+            clearForm();
         } catch (e) {
-            console.error('Erro ao salvar/atualizar os dados do aluno', e);
+            console.error('Erro ao cadastrar aluno', e);
         }
     };
 
-    const loadAlunos = async () => {
-        const alunosCollection = collection(firestore, 'alunos');
-        const alunosDocs = await getDocs(alunosCollection);
-        const alunosData: Aluno[] = alunosDocs.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-        })) as Aluno[];
-        setAlunos(alunosData);
+    const clearForm = () => {
+        setFormData({
+            nome: '',
+            sobrenome: '',
+            datanascimento: '',
+            sexo: ''
+        });
     };
-
-    const handleEdit = (aluno: Aluno) => {
-        setFormData(aluno);
-    };
-
-    const handleDelete = async (id: string) => {
-        if (confirm('Tem certeza que deseja deletar?')) {
-            try {
-                await deleteDoc(doc(firestore, 'alunos', id));
-                alert('Aluno deletado com sucesso');
-                loadAlunos();
-            } catch (e) {
-                console.error('Erro ao deletar', e);
-            }
-        }
-    };
-
-    useEffect(() => {
-        const testConnection = async () => {
-            try {
-                const testCollection = collection(firestore, "teste");
-                await getDocs(testCollection);
-                setMensagem("Conectado ao Firestore com sucesso!");
-            } catch (error) {
-                console.error("Erro ao conectar ao Firestore:", error);
-                setMensagem("Falha ao conectar ao Firestore. Tente novamente mais tarde.");
-            }
-        };
-
-        testConnection();
-    }, []);
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-gray-400 p-8">
             <form onSubmit={handleSubmit} className="w-full max-w-lg p-8 bg-white rounded-lg shadow-md">
-                <h2 className="text-xl font-bold mb-4 text-center">Cadastro</h2>
+                <h2 className="text-xl font-bold mb-4 text-center">Cadastro de Aluno</h2>
                 <div className="mb-4">
                     <label className="block text-gray-700 mb-1" htmlFor="nome">Nome</label>
                     <input
@@ -165,29 +102,22 @@ const Cadastro = () => {
                         <option value="outro">Outro</option>
                     </select>
                 </div>
-                <button
-                    type="submit"
-                    className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-                >
-                    Salvar
-                </button>
-               
+                <div className="flex justify-between">
+                    <button
+                        type="submit"
+                        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                    >
+                        Salvar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={clearForm}
+                        className="bg-gray-300 text-gray-700 p-2 rounded hover:bg-gray-400"
+                    >
+                        Limpar
+                    </button>
+                </div>
             </form>
-
-            <div className="mt-8 w-full">
-                <h2> LISTA DE ALUNOS CADASTRADOS </h2>
-                <ul>
-                    {alunos.map(aluno => (
-                        <li key={aluno.id} className="flex justify-between items-center">
-                            <span>{aluno.nome}</span>
-                            <div>
-                                <button onClick={() => handleEdit(aluno)} className="mr-2">Editar</button>
-                                <button onClick={() => handleDelete(aluno.id)}>Deletar</button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </div>
         </div>
     );
 };
