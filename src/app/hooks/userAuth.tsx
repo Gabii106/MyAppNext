@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { auth } from "../lib/firebaseconfig";
-import { onAuthStateChanged  } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { getSession } from 'next-auth/react';
+import { Session } from 'next-auth';
 
-interface User{
+interface User {
     uid: string;
     email: string;
 }
@@ -10,13 +12,30 @@ interface User{
 export const useAuth = () => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-
+    
     useEffect(() => {
-        const onsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user ? {uid:user.uid, email: user.email || ''} : null)
-            setLoading(false)
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                // Se o Firebase reconhece o usuário
+                setUser({
+                    uid: firebaseUser.uid, email: firebaseUser.email
+                        || ''
+                });
+            } else {
+                // Caso contrário, tente obter a sessão do NextAuth
+                const session: Session | null = await getSession();
+                if (session && session.user) {
+                    setUser({
+                        uid: session.user.email || '', email:
+                            session.user.email || ''
+                    });
+                } else {
+                    setUser(null);
+                }
+            }
+            setLoading(false);
         });
-        return () => onsubscribe();
+        return () => unsubscribe();
     }, []);
-    return {user, loading};
-}
+    return { user, loading };
+};

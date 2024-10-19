@@ -20,10 +20,10 @@ const Cadastro = () => {
     const router = useRouter();
 
     useEffect(() => {
-        if(!loading && !user){
-            router.push("/login");
-        }
-    }, [user, loading, router]);
+         if(!loading && !user){
+             router.push("/login");
+         }
+     }, [user, loading, router]);
 
 
     const [formData, setFormData] = useState<Aluno>({
